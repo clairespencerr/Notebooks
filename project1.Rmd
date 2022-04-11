@@ -1,0 +1,157 @@
+---
+title: What NCAA Big Ten team was the most accurate with their shooting in the 2021-22
+  season?
+author: Claire Spencer
+date: '2022-04-06'
+slug: what-ncaa-big-ten-team-was-the-most-accurate-with-their-shooting-in-the-2021-22-season
+categories: []
+tags: []
+---
+
+We love to cheer on our NCAA Big Ten teams in a crowd full of screaming fans, right? Because everyone knows the Big Ten has the greatest fans in college sports. But it isn't so enjoyable hearing those loud 'BOO's when your team misses the winning shot, right? When we take into account all of these shots, sink or miss, what team comes out on top this season?
+
+First, lets look at the field goal percentages for each Big Ten team this season. Field goal percentage is going to take into account all of a players attempted shots compared to shots made. While this can be an accurate way of comparing players, an effective field goal percentage is going to change things. Effective field goal will recognize that a 3-point shot is 3 points, while a 2-point is only worth 2. 
+
+So when all shots, made or missed, are accounted for the right amount of points, what team are you cheering for? Here are the Big Ten players field goal and effective field goal percentages averaged out by team.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(gt)
+library(ggrepel)
+library(scales)
+library(ggalt)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+bigten <- read_csv("http://mattwaite.github.io/sportsdatafiles/players22.csv") %>% filter(Conference == "Big Ten")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rating <- bigten %>%
+  select(Team, `FG%`, `eFG%`) %>%
+  filter(`FG%` > .0, `eFG%` > .0) %>%
+  group_by(Team) %>% 
+  summarise(
+    FieldGoalPct = mean(`FG%`),
+    EffectiveFGPct = mean(`eFG%`)) %>%
+  arrange(desc(EffectiveFGPct)) 
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rating %>% 
+  gt() %>% 
+  cols_label(
+    FieldGoalPct = "Field Goal Percentage",
+    EffectiveFGPct = "Effective Field Goal Percentage"
+  ) %>%
+  tab_header(
+    title = "When all points are accounted for accurately, what team should you count on?",
+    subtitle = "Three-pointers aren't always accounted for being worth more than a two-pointer, but when they are, things take a turn."
+  ) %>% tab_style(
+    style = cell_text(color = "black", weight = "bold", align = "left"),
+    locations = cells_title("title")
+  ) %>% tab_style(
+    style = cell_text(color = "black", align = "left"),
+    locations = cells_title("subtitle")
+  ) %>%
+  tab_source_note(
+    source_note = md("**By:** Claire Spencer  |  **Source:** Sports Reference")
+  ) %>%
+  tab_style(
+     locations = cells_column_labels(columns = everything()),
+     style = list(
+       cell_borders(sides = "bottom", weight = px(3)),
+       cell_text(weight = "bold", size=12)
+     )
+   ) %>%
+  opt_row_striping() %>% 
+  opt_table_lines("none") %>%
+    fmt_percent(
+    columns = c(FieldGoalPct, EffectiveFGPct),
+    decimals = 1
+  )
+```
+When effective field goal percentage is used, nearly every teams percent increases by about 10%. And with that, Indiana comes out on top. Although they unfortunately upset in the first round of the NCAA tournament, they still had the highest ranking of shots attempted to shots made. So what happened there? Let's look at each teams true shooting percentage and separating by player. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+trueshooting <- bigten %>%
+  filter(`TS%` > 0) %>%
+  group_by(Team, Player) %>%
+  summarise(
+    TrueShootingPercent = mean(`TS%`)) %>%
+      arrange(desc(TrueShootingPercent))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+nc <- trueshooting %>% filter(Player == "Nathan Childress")
+average <- trueshooting %>% filter(TrueShootingPercent > 0.5348286)
+
+ggplot() + 
+  geom_point(data=trueshooting, aes(x=TrueShootingPercent, y=Team), color="black") +
+  geom_point(data=average, aes(x=TrueShootingPercent, y=Team), color="blue") +
+  geom_point(data=nc, aes(x=TrueShootingPercent, y=Team), color="red") +
+  geom_text(data=nc, aes(x=TrueShootingPercent-.2, y=Team, label=Player)) +
+  labs(x="True Shooting Percentage", y="", title="Nathan Childress nearly went off the charts", subtitle="The junior who only played 8 minutes all season changed everything for the Hoosiers.", caption="Source: Sports Reference | By Claire Spencer") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 10), 
+    plot.subtitle = element_text(size=10), 
+    panel.grid.minor = element_blank(),
+    plot.title.position = "panel"
+    )
+```
+Nathan Childress, the pride and joy of the Hoosiers past season. The junior played a total of 8 minutes all season, so why is his true shooting percentage higher than anyone else? Well, he shot one 3-pointer all season...and made it. 
+
+Taking that into account, I think there are other teams worth looking into. For example, Ohio State was second in effective field goal percentage, and over half of their players had above average true shooting percentages.
+
+The Iowa Hawkeyes could be considered a close second. With their field goal percentages being slightly lower than the Buckeyes, all except two of their players sustained an above average true shooting percentage. 
+
+So, separating 2-points, 3-points, and free throws, what team is most likely going to make the most shots? This bubble chart shows the average two point and free throw percentages, as well as the size of the bubble being the three point percentage.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+points <- bigten %>% 
+  filter(`3P%` > 0, `2P%` > 0, `FT%` > 0) %>%
+  group_by(Team) %>%
+  summarise(
+    ThreePointPct = mean(`3P%`),
+    TwoPointPct = mean(`2P%`),
+    FreeThrowPct = mean(`FT%`)) %>%
+  arrange(desc(ThreePointPct))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+aboveavg <- points %>% filter(ThreePointPct > 0.3613889)
+
+ggplot() + 
+  geom_point(
+    data=points, 
+    aes(x=TwoPointPct, y=FreeThrowPct, size=ThreePointPct),
+    color="grey",
+    alpha = .75) + 
+  geom_point(
+    data=aboveavg, 
+    aes(x=TwoPointPct, y=FreeThrowPct, size=ThreePointPct),
+    color="red") +
+  geom_vline(xintercept = 0.5063529) +
+  geom_hline(yintercept = 0.7100327) +
+  scale_size(range = c(2, 8), name="Three Point Percentage") +
+  geom_text_repel(
+    data=aboveavg, 
+    aes(x=TwoPointPct, y=FreeThrowPct, label=Team)) +
+  labs(x="Two Point Percentage", y="Free Throw Percentage", title="5 Big Ten teams sneak up in the points percentages", subtitle="When you put together all of the point percentages, who comes out from hiding?", caption="Source: Sports Reference | By Claire Spencer") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 10), 
+    plot.subtitle = element_text(size=10), 
+    panel.grid.minor = element_blank(),
+    plot.title.position = "panel"
+    )
+```
+Would you look at that? There goes the Hawkeyes. The Ohio State Buckeyes up top for free throws, just about average in two pointers, and the largest bubble for the highest three point percentage. 
+
+While the Buckeyes are just about at the top for the bubble chart, they also had over half of their players with above average true shooting percentages and their effective field goal percentage was the second highest, after Nathan Childress 3-point moment of excitement. 
+
+When it all boils down, you won't want to miss a Buckeyes Big Ten game next year. 
+

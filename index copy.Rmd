@@ -1,0 +1,184 @@
+---
+title: Of the seven times the Huskers' mens basketball team qualified for the NCAA tournament, what season prior were they the strongest?
+author: Claire Spencer
+date: '2022-04-26'
+slug: of-the-seven-times-the-huskers-mens-basketball-team-qualified-for-the-ncaa-tournament-what-season-prior-were-they-the-strongest
+categories: []
+tags: []
+---
+The Huskers' mens basketball team has successfully made it to the first and second round of the NCAA tournament a total of seven times. Over the course of these seasons, Moe Iba, Tim Miles, and Danny Nee all had a chance to experience the tournament. But, what season prior to March Madness were the Huskers' the most successful to get them qualified? 
+
+First, let's look at the total wins and losses for each season, with the most games played at the top.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rvest)
+library(ggalt)
+library(gt)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+nebraskahistory <- "https://www.sports-reference.com/cbb/schools/nebraska/"
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+nebraska <- nebraskahistory %>%
+  read_html() %>%
+  html_nodes(xpath = '//*[@id="div_nebraska"]') %>%
+  html_table(FALSE)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+history <- nebraska[[1]]
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+historyrenamed <- history %>%
+  rename(
+    SeasonNumber=X1, 
+    Season=X2, 
+    Conference=X3, 
+    TotalWins=X4, 
+    TotalLosses=X5, 
+    OverallWinMinusLossPct=X6, 
+    ConferenceWins=X7, 
+    ConferenceLosses=X8, 
+    ConferenceWinMinusLossPct=X9, 
+    SimpleRating=X10, 
+    StrengthofSeason=X11, 
+    AvgPointsPerGame=X12, 
+    AvgOffensePointsPerGame=X13, 
+    Blank1=X14, 
+    Blank2=X15, 
+    Blank3=X16, 
+    NCAATournament=X17, 
+    Blank4=X18, 
+    Coach=X19
+  )
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+historyrenamednogarbage <- historyrenamed %>% 
+  filter(SeasonNumber != "Rk" & Season != "Season" & TotalWins != "Overall") 
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+statswithnumbers <- historyrenamednogarbage %>% 
+  select(-starts_with("Blank"))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tournament <- statswithnumbers %>% filter(Season == "2013-14" | Season == "1997-98" | Season == "1993-94" | Season == "1992-93" | Season == "1991-92" | Season == "1990-91" | Season == "1985-86")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+winloss <- tournament %>%
+  group_by(Season) %>%
+  summarise(
+    TotalWins = TotalWins,
+    TotalLosses = TotalLosses)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+winlosswide <- winloss %>% 
+  pivot_longer(
+    cols=starts_with("Total"), 
+    names_to="Type", 
+    values_to="Outcome") %>%
+  mutate(Outcome = as.numeric(Outcome))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot() + 
+  geom_bar(data=winlosswide, aes(x=reorder(Season, Outcome), weight=Outcome, fill=Type)) + 
+  coord_flip() +
+  labs(x="Season", y="Count", title="The 1990-91 team put the Huskers' on the map", subtitle="Coach Danny Nees' team ended with the most season wins in Husker history.", caption="Source: Sports Reference | By Claire Spencer") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 10), 
+    plot.subtitle = element_text(size=10), 
+    panel.grid.minor = element_blank(),
+    plot.title.position = "panel"
+    )
+```
+From this stacked bar chart, it is very clear that the 1990-91 season played the most games, but also had the most wins and the least losses. A season total of 26 wins and only 8 losses puts Danny Nee's team at the top.
+
+Going more in depth, let's take a look at the Huskers' average points scored per game compared to the defensive average points per game throughout each season.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+points <- tournament %>% 
+  group_by(Season) %>%
+  summarise(
+    AveragePointsPerGame = AvgPointsPerGame,
+    OffenseAveragePointsPerGame = AvgOffensePointsPerGame)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot() + 
+  geom_dumbbell(
+    data=points, 
+    aes(y=Season, x=AveragePointsPerGame, xend=OffenseAveragePointsPerGame),
+    size = 2,
+    colour = "grey",
+    colour_x = "red",
+    colour_xend = "black") +
+  labs(x="Average Points Per Game", y="Season", title="The most wins means the most points, right?", subtitle="1990-91 team continues to hold onto their title scoring the most average points.", caption="Source: Sports Reference | By Claire Spencer") + 
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title = element_text(size = 10), 
+    plot.subtitle = element_text(size=10), 
+    panel.grid.minor = element_blank(),
+    plot.title.position = "panel"
+    )
+```
+The 1990-91 stays on top once again with a season average of 87.6 points per game, and a defensive average of 78.6 points per game. This is also the largest point difference compared to the other six seasons. 
+
+The NCAA simple rating is a statistic that takes the seasons point differential and divides it by the total number of games. Along with that, the strength of season is a representation of the difficulty of teams the home team played against over the season.
+
+Let's take a look at these two statistics for each season.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rating <- tournament %>% 
+  select(Season, SimpleRating, StrengthofSeason) %>%
+  arrange(desc(SimpleRating)) 
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rating %>% 
+  gt() %>% 
+  cols_label(
+    SimpleRating = "Simple Rating",
+    StrengthofSeason = "Strength of Season"
+  ) %>% 
+    tab_header(
+    title = "Nee stays on top with the best of the best",
+    subtitle = "The Huskers' played the most difficult teams, and maintained their title."
+  ) %>% tab_style(
+    style = cell_text(color = "black", weight = "bold", align = "left"),
+    locations = cells_title("title")
+  ) %>% tab_style(
+    style = cell_text(color = "black", align = "left"),
+    locations = cells_title("subtitle")
+  ) %>%
+  tab_source_note(
+    source_note = md("**By:** Claire Spencer  |  **Source:** Sports Reference")
+  ) %>%
+  tab_style(
+     locations = cells_column_labels(columns = everything()),
+     style = list(
+       cell_borders(sides = "bottom", weight = px(3)),
+       cell_text(weight = "bold", size=14)
+     )
+   ) %>%
+  opt_row_striping() %>% 
+  opt_table_lines("none") %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "red"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = Season == "1990-91")
+  )
+```
+Once again, 1990-91 comes out on top with the highest simple rating and strength of season. With the most wins, highest point differential, most average points per game, and playing the most difficult teams, Danny Nee pulled together a great team. Nee took the Huskers' to the NCAA tournament five out of the seven seasons as well. 
+
+
